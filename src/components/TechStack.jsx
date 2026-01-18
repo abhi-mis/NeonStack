@@ -8,7 +8,7 @@ const techGroups = [
     },
     {
         category: "Backend & Cloud",
-        items: ["Node.js", "Python", "Go", "Firebase", "AWS Lambda", "Supabase"]
+        items: ["Node.js", "Python", "ASP.Net", "Firebase", "AWS Lambda", "SpringBoot"]
     },
     {
         category: "AI & Intelligence",
