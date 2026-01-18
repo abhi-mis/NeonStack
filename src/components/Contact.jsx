@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { db } from '../firebase';
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 
 const Contact = () => {
     const [step, setStep] = useState(1);
     const [selection, setSelection] = useState('');
     const [formData, setFormData] = useState({ name: '', email: '', message: '' });
     const [status, setStatus] = useState('');
+    const [errorMessage, setErrorMessage] = useState('');
 
     const choices = [
         { label: "Web App", desc: "SaaS, Dashboard, Portal" },
@@ -19,19 +22,35 @@ const Contact = () => {
         setStep(2);
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setStatus('sending');
-        setTimeout(() => {
+        setErrorMessage('');
+
+        try {
+            await addDoc(collection(db, "contacts"), {
+                name: formData.name,
+                email: formData.email,
+                message: formData.message,
+                projectType: selection,
+                createdAt: serverTimestamp()
+            });
+
             setStatus('sent');
-            // Simulate submission
+
+            // Reset form after 3 seconds
             setTimeout(() => {
                 setStep(1);
                 setStatus('');
                 setSelection('');
                 setFormData({ name: '', email: '', message: '' });
             }, 3000);
-        }, 1500);
+
+        } catch (error) {
+            console.error("Error submitting form: ", error);
+            setStatus('error');
+            setErrorMessage('Something went wrong. Please try again or email us directly.');
+        }
     };
 
     return (
@@ -90,8 +109,17 @@ const Contact = () => {
 
                             {status === 'sent' ? (
                                 <div style={{ textAlign: 'center', padding: '2rem' }}>
-                                    <h3 style={{ color: 'var(--neon-green)', fontSize: '1.5rem', marginBottom: '1rem' }}>Received!</h3>
-                                    <p>We'll be in touch shortly.</p>
+                                    <motion.div
+                                        initial={{ scale: 0 }}
+                                        animate={{ scale: 1 }}
+                                        style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'var(--neon-green)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', boxShadow: '0 0 20px var(--neon-green)' }}
+                                    >
+                                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M20 6L9 17L4 12" stroke="black" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+                                    </motion.div>
+                                    <h3 style={{ color: 'var(--text-primary)', fontSize: '1.8rem', marginBottom: '1rem' }}>Received!</h3>
+                                    <p style={{ color: 'var(--text-secondary)' }}>We'll be in touch shortly.</p>
                                 </div>
                             ) : (
                                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -99,28 +127,41 @@ const Contact = () => {
                                         type="text"
                                         placeholder="Name"
                                         required
-                                        style={{ padding: '1rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: 'inherit' }}
+                                        value={formData.name}
+                                        style={{ padding: '1rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: 'inherit', fontSize: '1rem' }}
                                         onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                        disabled={status === 'sending'}
                                     />
                                     <input
                                         type="email"
                                         placeholder="Email"
                                         required
-                                        style={{ padding: '1rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: 'inherit' }}
+                                        value={formData.email}
+                                        style={{ padding: '1rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: 'inherit', fontSize: '1rem' }}
                                         onChange={e => setFormData({ ...formData, email: e.target.value })}
+                                        disabled={status === 'sending'}
                                     />
                                     <textarea
-                                        placeholder="Tell us a bit more..."
-                                        rows="3"
-                                        style={{ padding: '1rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: 'inherit', resize: 'vertical' }}
+                                        placeholder="Tell us a bit more about your project..."
+                                        rows="4"
+                                        value={formData.message}
+                                        style={{ padding: '1rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: 'inherit', resize: 'vertical', fontSize: '1rem', fontFamily: 'inherit' }}
                                         onChange={e => setFormData({ ...formData, message: e.target.value })}
+                                        disabled={status === 'sending'}
                                     ></textarea>
 
+                                    {status === 'error' && (
+                                        <p style={{ color: '#ff4d4d', fontSize: '0.9rem', textAlign: 'center' }}>
+                                            {errorMessage}
+                                        </p>
+                                    )}
+
                                     <motion.button
-                                        whileHover={{ scale: 1.02 }}
+                                        whileHover={{ scale: 1.02, boxShadow: '0 0 20px rgba(0, 243, 255, 0.4)' }}
                                         whileTap={{ scale: 0.98 }}
                                         className="btn btn-primary"
                                         disabled={status === 'sending'}
+                                        style={{ opacity: status === 'sending' ? 0.7 : 1, cursor: status === 'sending' ? 'not-allowed' : 'pointer' }}
                                     >
                                         {status === 'sending' ? 'Sending...' : 'Start Project'}
                                     </motion.button>
